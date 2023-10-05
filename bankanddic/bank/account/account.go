@@ -2,6 +2,7 @@ package account
 
 import (
 	"errors"
+	"fmt"
 )
 
 // Account Struct
@@ -36,4 +37,20 @@ func (a *Account) Withdraw(amount int) error {
 	}
 	a.balance -= amount
 	return nil
+}
+
+// ChangeName of Account
+func (a *Account) ChangeName(newName string) {
+	a.name = newName
+}
+
+// ShowName of Account
+func (a Account) ShowName() string {
+	return a.name
+}
+
+// 이름이 String 이여야함
+// String about when call Account
+func (a Account) String() string {
+	return fmt.Sprint(a.ShowName(), "의 계좌 \n잔액 : ", a.ShowBalance())
 }
