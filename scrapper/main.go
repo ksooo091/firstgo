@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-var keyWord string = "데브옵스"
+var keyWord string = "python"
 var baseURL string = "https://www.saramin.co.kr/zf_user/search/recruit?&searchword=" + keyWord
 
 type extractedJob struct {
@@ -22,13 +22,20 @@ type extractedJob struct {
 }
 
 func main() {
+
 	var jobs []extractedJob
+	c := make(chan []extractedJob)
 	totalPages := getTotalPages()
 	fmt.Println(totalPages)
 	for i := 0; i < totalPages+1; i++ {
-		extractedJobs := getPage(i + 1)
+		go getPage(i+1, c)
+
+	}
+	for i := 0; i < totalPages+1; i++ {
+		extractedJobs := <-c
 		jobs = append(jobs, extractedJobs...)
 	}
+
 	writeJobs(jobs)
 
 }
@@ -39,7 +46,7 @@ func writeJobs(jobs []extractedJob) {
 	w := csv.NewWriter(file)
 	defer w.Flush()
 
-	headers := []string{"id", "Title", "Location"}
+	headers := []string{"링크", "제목", "위치"}
 
 	wErr := w.Write(headers)
 	checkError(wErr)
@@ -51,8 +58,9 @@ func writeJobs(jobs []extractedJob) {
 	}
 }
 
-func getPage(page int) []extractedJob {
+func getPage(page int, mainC chan<- []extractedJob) {
 	var jobs []extractedJob
+	c := make(chan extractedJob)
 	pageURL := baseURL + "&recruitPage=" + strconv.Itoa(page)
 
 	res, err := http.Get(pageURL)
@@ -71,19 +79,23 @@ func getPage(page int) []extractedJob {
 	searchCards := doc.Find(".item_recruit")
 	searchCards.Each(func(i int, card *goquery.Selection) {
 
-		job := extractJob(card)
-		jobs = append(jobs, job)
+		go extractJob(card, c)
+
 	})
-	return jobs
+	for i := 0; i < searchCards.Length(); i++ {
+		job := <-c
+		jobs = append(jobs, job)
+	}
+	mainC <- jobs
 }
 
-func extractJob(card *goquery.Selection) extractedJob {
+func extractJob(card *goquery.Selection, c chan<- extractedJob) {
 	id, _ := card.Attr("value")
 	title := cleanString(card.Find(".area_job>.job_tit>a").Text())
 
 	location := cleanString(card.Find(".area_job>.job_condition>span>a").Text())
 
-	return extractedJob{
+	c <- extractedJob{
 		id:       id,
 		title:    title,
 		location: location}
