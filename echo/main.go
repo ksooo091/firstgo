@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/firstgo/echo/scrapper"
+	"github.com/ksooo091/firstgo/echo/scrapper"
 	"github.com/labstack/echo"
 	"os"
 	"strings"
